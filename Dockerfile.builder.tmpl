@@ -1,0 +1,36 @@
+{{ .base | strings.TrimSpace }}
+
+RUN apk add --no-cache \
+	ca-certificates \
+	git \
+	libcap
+
+ENV XKENGINE_VERSION v{{ .xkengine_config.version }}
+# Configures xkengine to build with this version of Kengine
+ENV KENGINE_VERSION v{{ .config.kengine_version }}
+# Configures xkengine to not clean up post-build (unnecessary in a container)
+ENV XKENGINE_SKIP_CLEANUP 1
+# Sets capabilities for output kengine binary to be able to bind to privileged ports
+ENV XKENGINE_SETCAP 1
+
+RUN set -eux; \
+	apkArch="$(apk --print-arch)"; \
+	case "$apkArch" in \
+		x86_64)  binArch='amd64'; checksum='{{ .xkengine_checksums.amd64 }}' ;; \
+		armhf)   binArch='armv6'; checksum='{{ .xkengine_checksums.arm32v6 }}' ;; \
+		armv7)   binArch='armv7'; checksum='{{ .xkengine_checksums.arm32v7 }}' ;; \
+		aarch64) binArch='arm64'; checksum='{{ .xkengine_checksums.arm64v8 }}' ;; \
+		ppc64el|ppc64le) binArch='ppc64le'; checksum='{{ .xkengine_checksums.ppc64le }}' ;; \
+		riscv64) binArch='riscv64'; checksum='{{ .xkengine_checksums.riscv64 }}' ;; \
+		s390x)   binArch='s390x'; checksum='{{ .xkengine_checksums.s390x }}' ;; \
+		*) echo >&2 "error: unsupported architecture ($apkArch)"; exit 1 ;;\
+	esac; \
+	wget -O /tmp/xkengine.tar.gz "https://github.com/khulnasoft/xkengine/releases/download/v{{ .xkengine_config.version }}/xkengine_{{ .xkengine_config.version }}_linux_${binArch}.tar.gz"; \
+	echo "$checksum  /tmp/xkengine.tar.gz" | sha512sum -c; \
+	tar x -z -f /tmp/xkengine.tar.gz -C /usr/bin xkengine; \
+	rm -f /tmp/xkengine.tar.gz; \
+	chmod +x /usr/bin/xkengine;
+
+COPY kengine-builder.sh /usr/bin/kengine-builder
+
+WORKDIR /usr/bin

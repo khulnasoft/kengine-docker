@@ -1,0 +1,18 @@
+{{ .base | strings.TrimSpace }}
+
+SHELL ["powershell", "-Command", "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue';"]
+
+ENV XKENGINE_VERSION v{{ .xkengine_config.version }}
+# Configures xkengine to build with this version of Kengine
+ENV KENGINE_VERSION v{{ .config.kengine_version }}
+# Configures xkengine to not clean up post-build (unnecessary in a container)
+ENV XKENGINE_SKIP_CLEANUP 1
+
+RUN Invoke-WebRequest \
+        -Uri "https://github.com/khulnasoft/xkengine/releases/download/v{{ .xkengine_config.version }}/xkengine_{{ .xkengine_config.version }}_windows_amd64.zip" \
+        -OutFile "/xkengine.zip"; \
+    if (!(Get-FileHash -Path /xkengine.zip -Algorithm SHA512).Hash.ToLower().Equals('{{ .xkengine_checksums.windows_amd64 }}')) { exit 1; }; \
+    Expand-Archive -Path "/xkengine.zip" -DestinationPath "/" -Force; \
+    Remove-Item "/xkengine.zip" -Force
+
+WORKDIR /

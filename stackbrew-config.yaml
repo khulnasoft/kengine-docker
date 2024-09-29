@@ -1,0 +1,39 @@
+versions:
+  - kengine_version: '2.8.4'
+    is_major: true
+    is_latest: true
+    dist_commit: 509c30cecd3cbc4012f6b1cc88d8f3f000fb06e4
+xkengine_config:
+  version: '0.4.2'
+# configuration for the stackbrew.tmpl template
+variants:
+  - dir: alpine
+    tags: [ "alpine" ]
+    shared_tags: [ "latest" ]
+    architectures: [ amd64, arm64v8, arm32v6, arm32v7, ppc64le, riscv64, s390x ]
+  - dir: builder
+    tags: [ "builder-alpine" ]
+    shared_tags: [ "builder" ]
+    architectures: [ amd64, arm64v8, arm32v6, arm32v7, ppc64le, riscv64, s390x ]
+  - dir: windows/1809
+    base_file: Dockerfile.windowsservercore-1809.base
+    tags: [ "windowsservercore-1809" ]
+    shared_tags: [ "windowsservercore", "latest" ]
+    architectures: [ windows-amd64 ]
+    constraints: [ windowsservercore-1809 ]
+  - dir: windows/ltsc2022
+    base_file: Dockerfile.windowsservercore-ltsc2022.base
+    tags: [ "windowsservercore-ltsc2022" ]
+    shared_tags: [ "windowsservercore", "latest" ]
+    architectures: [ windows-amd64 ]
+    constraints: [ windowsservercore-ltsc2022 ]
+  - dir: windows-builder/1809
+    tags: [ "builder-windowsservercore-1809" ]
+    shared_tags: [ "builder" ]
+    architectures: [ windows-amd64 ]
+    constraints: [ windowsservercore-1809 ]
+  - dir: windows-builder/ltsc2022
+    tags: [ "builder-windowsservercore-ltsc2022" ]
+    shared_tags: [ "builder" ]
+    architectures: [ windows-amd64 ]
+    constraints: [ windowsservercore-ltsc2022 ]

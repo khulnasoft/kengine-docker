@@ -1,0 +1,12 @@
+#!/bin/bash
+set -exo pipefail
+
+# install bashbrew for the build
+docker create --name bb hairyhenderson/bashbrew
+docker cp bb:/bin/bashbrew .
+
+export BASHBREW_LIBRARY=./library
+export BASHBREW_NAMESPACE=kengine
+
+./bashbrew build kengine
+./bashbrew push --dry-run kengine

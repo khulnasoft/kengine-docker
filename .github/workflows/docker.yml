@@ -1,0 +1,62 @@
+name: Docker Build
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+  docker-linux-build:
+    runs-on: ubuntu-latest
+    container:
+      image: hairyhenderson/dockerfiles-builder:latest
+    env:
+      BASHBREW_LIBRARY: ./library
+      BASHBREW_NAMESPACE: kengine
+      DOCKER_BUILDKIT: '1'
+    steps:
+      - uses: actions/checkout@master
+      - name: non-master build test
+        run: |
+          docker build -f 2.8/alpine/Dockerfile 2.8/alpine
+          docker build -f 2.8/builder/Dockerfile 2.8/builder
+        if: github.repository != 'khulnasoft/kengine-docker' || github.ref != 'refs/heads/master'
+      - name: build
+        run: bashbrew build kengine
+      - name: push
+        # NOTE: DOCKER_TOKEN and DOCKER_USERNAME must be present in https://github.com/khulnasoft/kengine-docker/settings
+        # the user must have permission to push to https://hub.docker.com/r/kengine/kengine
+        run: |
+          echo ${{ secrets.DOCKER_TOKEN }} | docker login --username ${{ secrets.DOCKER_USERNAME }} --password-stdin
+          bashbrew push kengine
+        if: github.repository == 'khulnasoft/kengine-docker' && github.ref == 'refs/heads/master'
+      - name: push (non-master dry run)
+        run: |
+          bashbrew push --dry-run kengine
+        if: github.repository != 'khulnasoft/kengine-docker' || github.ref != 'refs/heads/master'
+  docker-windows-build:
+    runs-on: windows-2019
+    # env:
+    #   BASHBREW_LIBRARY: ./library
+    #   BASHBREW_NAMESPACE: kengine
+    steps:
+      - uses: actions/checkout@master
+      - name: non-master build test
+        run: |
+          docker build -f 2.8/windows/1809/Dockerfile 2.8/windows
+        if: github.repository != 'khulnasoft/kengine-docker' || github.ref != 'refs/heads/master'
+      - name: install bashbrew
+        run: curl -o /bashbrew.exe https://doi-janky.infosiftr.net/job/bashbrew/job/master/lastSuccessfulBuild/artifact/bashbrew-windows-amd64.exe
+      - name: build
+        run: /bashbrew --arch windows-amd64 --constraint windowsservercore-1809 --namespace kengine --library ./library build kengine
+      - name: push
+        # NOTE: DOCKER_TOKEN and DOCKER_USERNAME must be present in https://github.com/khulnasoft/kengine-docker/settings
+        # the user must have permission to push to https://hub.docker.com/r/kengine/kengine
+        run: |
+          echo ${{ secrets.DOCKER_TOKEN }} | docker login --username ${{ secrets.DOCKER_USERNAME }} --password-stdin;
+          /bashbrew --arch windows-amd64 --constraint windowsservercore-1809 --namespace kengine --library ./library push kengine
+        if: github.repository == 'khulnasoft/kengine-docker' && github.ref == 'refs/heads/master'
+      - name: push (non-master dry run)
+        run: |
+          /bashbrew --arch windows-amd64 --constraint windowsservercore-1809 --namespace kengine --library ./library push --dry-run kengine
+        if: github.repository != 'khulnasoft/kengine-docker' || github.ref != 'refs/heads/master'

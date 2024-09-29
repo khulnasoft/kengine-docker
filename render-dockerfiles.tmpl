@@ -1,0 +1,34 @@
+{{- range $version := .config.versions }}
+	{{- $minor := $version.kengine_version | regexp.Replace `([0-9]+\.[0-9]+).*$` `$1` }}
+	{{- $checksums := getChecksums "kengine" $version.kengine_version | json }}
+	{{- $xkengine_checksums := getChecksums "xkengine" $.config.xkengine_config.version | json }}
+
+	{{- range $variant := $.config.variants }}
+		{{- $dir := filepath.Join $minor $variant.dir }}
+		{{- test.Assert (print "Expected " $dir " to be a directory") (file.IsDir $dir) }}
+		{{- if not (file.Exists (filepath.Join $dir ".skip")) }}
+			{{- $template := "dockerfile" }}
+			{{- if eq "builder" $variant.dir -}}
+				{{ $template = "builder-dockerfile" -}}
+			{{ end -}}
+			{{- if strings.HasPrefix "windows-builder" $variant.dir -}}
+				{{ $template = "windows-builder-dockerfile" -}}
+			{{- else if strings.HasPrefix "windows" $variant.dir -}}
+				{{ $template = "windows-dockerfile" -}}
+			{{ end -}}
+			{{- $base := file.Read (filepath.Join $dir "Dockerfile.base") }}
+			{{- $ctx := dict "base" $base "config" $version "xkengine_config" $.config.xkengine_config "checksums" $checksums "xkengine_checksums" $xkengine_checksums}}
+			{{- $outPath := filepath.Join $dir "Dockerfile" -}}
+Rendering {{ $outPath }} with template {{ $template }}...{{ "\n" -}}
+			{{- tmpl.Exec $template $ctx | file.Write $outPath -}}
+
+			{{- if eq "builder" $variant.dir -}}
+				{{- $template = "kengine-builder" }}
+				{{- $ctx := dict "config" $version }}
+				{{- $outPath := filepath.Join $dir "kengine-builder.sh" -}}
+Rendering {{ $outPath }} with template {{ $template }}...{{ "\n" -}}
+				{{- tmpl.Exec $template $ctx | file.Write $outPath -}}
+			{{ end -}}
+		{{ end -}}
+	{{- end }}
+{{- end -}}
